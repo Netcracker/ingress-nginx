@@ -22,14 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       controller: ${{ steps.filter.outputs.rootfs }}
-      cfssl: ${{ steps.filter.outputs.cfssl }}
-      fastcgi-helloserver: ${{ steps.filter.outputs.fastcgi-helloserver }}
-      e2e-test-echo: ${{ steps.filter.outputs.e2e-test-echo }}
-      go-grpc-greeter-server: ${{ steps.filter.outputs.go-grpc-greeter-server }}
-      httpbun: ${{ steps.filter.outputs.httpbun }}
-      kube-webhook-certgen: ${{ steps.filter.outputs.kube-webhook-certgen }}
-      ext-auth-example-authsvc: ${{ steps.filter.outputs.ext-auth-example-authsvc }}
-      nginx: ${{ steps.filter.outputs.nginx }}
 
     steps:
       - name: Checkout
@@ -48,25 +40,8 @@ jobs:
       packages: write
     runs-on: ubuntu-latest
     needs: changes
-    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.rootfs == 'true')
-    # env:
-    #   BUILDX_PLATFORMS: linux/amd64,linux/arm,linux/arm64
+    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.controller == 'true')
     steps:
-    #   - name: Free Disk Space (Ubuntu)
-    #     uses: jlumbroso/free-disk-space@main
-    #     with:
-    #         # this might remove tools that are actually needed,
-    #         # if set to "true" but frees about 6 GB
-    #         tool-cache: false
-            
-    #         # all of these default to true, but feel free to set to
-    #         # "false" if necessary for your workflow
-    #         android: true
-    #         dotnet: true
-    #         haskell: true
-    #         large-packages: true
-    #         docker-images: true
-    #         swap-storage: true
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Get go version
@@ -87,9 +62,7 @@ jobs:
         with:
           version: latest
           platforms: linux/amd64,linux/arm,linux/arm64
-    #   - name: build-go
-    #     run: |
-    #       make build
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
