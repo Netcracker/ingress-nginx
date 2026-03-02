@@ -14,7 +14,9 @@
 
 NAME ?=
 
-REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+# REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+REGISTRY ?= ghcr.io/netcracker/ingress-nginx
+
 REPOSITORY ?= $(REGISTRY)/charts
 
 .PHONY: helm

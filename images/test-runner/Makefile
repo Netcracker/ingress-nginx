@@ -14,7 +14,8 @@
 
 BUILDER ?= ingress-nginx
 PLATFORMS ?= linux/amd64,linux/arm64
-REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+# REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+REGISTRY ?= ghcr.io/netcracker/ingress-nginx
 IMAGE ?= $(REGISTRY)/e2e-test-runner
 TAG ?= $(shell cat TAG)
 
