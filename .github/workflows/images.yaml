@@ -244,9 +244,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set push flag
         run: |
-          if [ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]; then
+          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]]; then
             echo "PUSH_FLAG='--push'"
             echo "PUSH_FLAG='--push'" >> $GITHUB_ENV
+          else
+            echo "PUSH_FLAG="
           fi
       - name: build-rootfs-image
         run: |
