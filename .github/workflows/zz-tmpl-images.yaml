@@ -7,6 +7,9 @@ on:
       name:
         required: true
         type: string
+      build:
+        type: string
+        default: 'true'
       platforms-test:
         type: string
         default: linux/amd64
@@ -23,6 +26,7 @@ permissions:
 
 jobs:
   changestag:
+    if: ${{ inputs.build == 'true' }}
     permissions:
       contents: read  # for dorny/paths-filter to fetch a list of changed files
     runs-on: ubuntu-latest
@@ -41,6 +45,7 @@ jobs:
               - 'images/**/TAG'
 
   image-build:
+    if: ${{ inputs.build == 'true' }}
     name: Build
     runs-on: ubuntu-latest
     permissions:
@@ -57,8 +62,7 @@ jobs:
   image-push:
     name: Push
     needs: changestag
-    if: |
-      (github.ref == 'refs/heads/main' && needs.changestag.outputs.tag == 'true')
+    if: (github.ref == 'refs/heads/main' && needs.changestag.outputs.tag == 'true' && inputs.build == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: write
