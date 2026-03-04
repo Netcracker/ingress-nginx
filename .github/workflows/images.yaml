@@ -66,26 +66,6 @@ jobs:
             nginx:
               - 'images/nginx/**'
 
-  #### TODO: Make the below jobs 'less dumb' and use the job name as parameter (the github.job context does not work here)
-  # build-images:
-  #   needs: changes
-  #   name: ${{ matrix.image }}
-  #   strategy:
-  #     matrix:
-  #       image:
-  #         - cfssl
-  #         - custom-error-pages
-  #         - e2e-test-echo
-  #         - ext-auth-example-authsvc
-  #         - fastcgi-helloserver
-  #         - go-grpc-greeter-server
-  #         - httpbun
-  #   uses: ./.github/workflows/zz-tmpl-images.yaml
-  #   with:
-  #     name: ${{ matrix.image }}
-  #     build: ${{ needs.changes.outputs[matrix.image] || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-  #   secrets: inherit
-
   cfssl:
     permissions:
       contents: write
@@ -262,13 +242,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Sep push flag
-        run: |
-      - name: build-rootfs-image
+      - name: Set push flag
         run: |
           if [ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]; then
-            PUSH_FLAG='--push'
+            echo "PUSH_FLAG='--push'"
+            echo "PUSH_FLAG='--push'" >> $GITHUB_ENV
           fi
+      - name: build-rootfs-image
+        run: |
           export TAG=$(cat images/nginx/TAG)
           export IMG_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx
           cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} $PUSH_FLAG -t ${IMG_NAME}:${TAG} .
