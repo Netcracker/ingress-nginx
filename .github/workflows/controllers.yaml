@@ -13,6 +13,8 @@ on:
     paths:
       - 'rootfs/**'
   workflow_dispatch: {}
+  schedule:
+    - cron: "0 3 * * 0"
 
 jobs:
   changes:
@@ -40,7 +42,7 @@ jobs:
       packages: write
     runs-on: ubuntu-latest
     needs: changes
-    if: (github.event_name == 'workflow_dispatch') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.controller == 'true')
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.controller == 'true')
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -69,6 +71,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set make command
+        run: |
+          make_cmd=ci
+          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{needs.changes.outputs.controller}}' == 'true' ]]; then
+            make_cmd=release
+          fi
+          echo "MAKE_COMMAND=$make_cmd" >> $GITHUB_ENV
+          echo "MAKE_COMMAND=$make_cmd"
       - name: build-images
         run: |
-          make release
+          make ${MAKE_COMMAND}

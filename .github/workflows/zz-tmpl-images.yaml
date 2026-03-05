@@ -57,8 +57,7 @@ jobs:
   image-push:
     name: Push
     needs: changestag
-    if: |
-      (github.ref == 'refs/heads/main' && needs.changestag.outputs.tag == 'true')
+    if: (github.ref == 'refs/heads/main' && needs.changestag.outputs.tag == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: write

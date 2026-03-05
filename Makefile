@@ -282,6 +282,37 @@ release: builder clean
 		--build-arg BUILD_ID="$(BUILD_ID)" \
 		-t $(REGISTRY)/controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
 
+.PHONY: ci # Build a multi-arch docker image
+ci: builder clean
+	echo "Building binaries..."
+	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
+
+	echo "Building and pushing ingress-nginx image...$(BUILDX_PLATFORMS)"
+
+	docker buildx build \
+		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
+		--pull \
+		--progress plain \
+		--platform $(BUILDX_PLATFORMS) \
+		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
+		--build-arg VERSION="$(TAG)" \
+		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
+		--build-arg BUILD_ID="$(BUILD_ID)" \
+		-t $(REGISTRY)/controller:$(TAG) rootfs
+
+	docker buildx build \
+		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
+		--pull \
+		--progress plain \
+		--platform $(BUILDX_PLATFORMS)  \
+		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
+		--build-arg VERSION="$(TAG)" \
+		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
+		--build-arg BUILD_ID="$(BUILD_ID)" \
+		-t $(REGISTRY)/controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
+
 .PHONY: build-docs
 build-docs:
 	pip install -r docs/requirements.txt

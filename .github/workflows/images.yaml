@@ -13,6 +13,8 @@ on:
     paths:
       - 'images/**'
   workflow_dispatch: {}
+  schedule:
+    - cron: "0 3 * * 0"
 permissions:
   contents: write
   packages: write
@@ -64,14 +66,13 @@ jobs:
             nginx:
               - 'images/nginx/**'
 
-  #### TODO: Make the below jobs 'less dumb' and use the job name as parameter (the github.job context does not work here)
   cfssl:
     permissions:
       contents: write
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.cfssl == 'true')
+      (needs.changes.outputs.cfssl == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: cfssl
@@ -83,7 +84,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.custom-error-pages == 'true')
+      (needs.changes.outputs.custom-error-pages == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: custom-error-pages
@@ -95,7 +96,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.e2e-test-echo == 'true')
+      (needs.changes.outputs.e2e-test-echo == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: e2e-test-echo
@@ -107,7 +108,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.ext-auth-example-authsvc == 'true')
+      (needs.changes.outputs.ext-auth-example-authsvc == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: ext-auth-example-authsvc
@@ -119,7 +120,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.fastcgi-helloserver == 'true')
+      (needs.changes.outputs.fastcgi-helloserver == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: fastcgi-helloserver
@@ -131,7 +132,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.go-grpc-greeter-server == 'true')
+      (needs.changes.outputs.go-grpc-greeter-server == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: go-grpc-greeter-server
@@ -143,7 +144,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.httpbun == 'true')
+      (needs.changes.outputs.httpbun == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: httpbun
@@ -185,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: |
-      (needs.changes.outputs.kube-webhook-certgen == 'true')
+      (needs.changes.outputs.kube-webhook-certgen == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -221,7 +222,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     env:
       PLATFORMS: linux/amd64,linux/arm,linux/arm64
     steps:
@@ -241,8 +242,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set push flag
+        run: |
+          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]]; then
+            echo "PUSH_FLAG='--push'"
+            echo "PUSH_FLAG='--push'" >> $GITHUB_ENV
+          else
+            echo "PUSH_FLAG="
+          fi
       - name: build-rootfs-image
         run: |
           export TAG=$(cat images/nginx/TAG)
           export IMG_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx
-          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} --push -t ${IMG_NAME}:${TAG} .
+          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} $PUSH_FLAG -t ${IMG_NAME}:${TAG} .
