@@ -79,7 +79,6 @@ jobs:
       - name: Set push flag
         id: push-flag
         run: |
-          PUSH=false
           if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
             if [[ '${{ github.event.inputs.release }}' == 'true' ]]; then
               if [[ -z '${{ github.event.inputs.version }}' ]]; then
@@ -88,6 +87,9 @@ jobs:
               fi
               echo "PUSH=true" >> $GITHUB_ENV
               echo "PUSH=true"
+            else # release input is false, so do not push images
+              echo "PUSH=false" >> $GITHUB_ENV
+              echo "PUSH=false"
             fi
           fi
           echo "PUSH=${PUSH}"
