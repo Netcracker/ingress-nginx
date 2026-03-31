@@ -1,5 +1,5 @@
 name: Release
-run-name: ${{ case(inputs.release == 'true', format('Release controller image and helm chart for version {0}', inputs.controller-version), 'Build images without pushing') }}
+run-name: ${{ case(inputs.release, format('Release controller image and helm chart for version {0}', inputs.controller-version), 'Build images without pushing') }}
 
 on:
   pull_request:
