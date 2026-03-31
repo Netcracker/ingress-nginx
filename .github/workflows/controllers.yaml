@@ -229,6 +229,7 @@ jobs:
       PUSH: ${{ needs.prepare.outputs.push }}
       CONTROLLER_DIGEST: ${{ needs.build-controllers-images.outputs.controller_digest }}
       CONTROLLER_CHROOT_DIGEST: ${{ needs.build-controllers-images.outputs.controller_chroot_digest }}
+      CHART_VERSION: ${{ github.event.inputs.chart-version }}
     steps:
       - name: Set up Helm Docs
         uses: gabe565/setup-helm-docs-action@d5c35bdc9133cfbea3b671acadf50a29029e87c2 # v1.0.4
@@ -249,8 +250,8 @@ jobs:
         if: ${{ needs.prepare.outputs.push == 'true' }}
         run: |
           # Update the helm chart version and appVersion to match the image tag
-          if [[ -n '${{ github.event.inputs.chart-version }}' ]]; then
-            yq eval -i '.version = "${{ github.event.inputs.chart-version }}"' charts/ingress-nginx/Chart.yaml
+          if [[ -n '${CHART_VERSION}' ]]; then
+            yq eval -i '.version = "${{ env.CHART_VERSION }}"' charts/ingress-nginx/Chart.yaml
           fi
           yq eval -i '.appVersion = "${{ env.TAG }}"' charts/ingress-nginx/Chart.yaml
           # Update the helm chart values.yaml to use the image with the digest
@@ -262,5 +263,8 @@ jobs:
           hack/generate-deploy-scripts.sh
           # Add changes to git and push
           git add .
-          git commit -m "release: Update helm chart version to ${TAG}" || true
+          git commit -m "release: Update helm chart version to ${CHART_VERSION}" || true
           git push
+          ### 🎋 Creating helm-chart-${CHART_VERSION} release tag
+          git tag "helm-chart-${CHART_VERSION}"
+          git push origin "helm-chart-${CHART_VERSION}"
