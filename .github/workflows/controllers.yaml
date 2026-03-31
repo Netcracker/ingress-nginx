@@ -64,14 +64,11 @@ jobs:
       - name: Setup tag
         id: tag
         run: |
+          TAG="$(cat TAG)"
           if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
             if [[ -n '${{ github.event.inputs.version }}' ]]; then
               TAG="${{ github.event.inputs.version }}"
-            else
-              TAG="$(cat TAG)"
             fi
-          else
-            TAG="$(cat TAG)"
           fi
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "TAG=$TAG" >> $GITHUB_ENV
@@ -79,21 +76,19 @@ jobs:
       - name: Set push flag
         id: push-flag
         run: |
+          PUSH=false
           if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
             if [[ '${{ github.event.inputs.release }}' == 'true' ]]; then
               if [[ -z '${{ github.event.inputs.version }}' ]]; then
                 echo "Error: version input is required when release input is true for workflow_dispatch event" >&2
                 exit 1
               fi
-              echo "PUSH=true" >> $GITHUB_ENV
-              echo "PUSH=true"
-            else # release input is false, so do not push images
-              echo "PUSH=false" >> $GITHUB_ENV
-              echo "PUSH=false"
+              PUSH=true
             fi
           fi
-          echo "PUSH=${PUSH}"
           echo "PUSH=${PUSH}" >> $GITHUB_OUTPUT
+          echo "PUSH=${PUSH}" >> $GITHUB_ENV
+          echo "PUSH=${PUSH}"
 
       - name: Check if it's a release build
         run: |
