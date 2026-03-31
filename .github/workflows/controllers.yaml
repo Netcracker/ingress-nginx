@@ -268,6 +268,7 @@ jobs:
         with:
           persist-credentials: true
           ref: release-${{ env.TAG }}
+          fetch-depth: 0
       - name: Prepare helm chart for release
         if: ${{ needs.prepare.outputs.push == 'true' }}
         run: |
