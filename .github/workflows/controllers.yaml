@@ -92,7 +92,7 @@ jobs:
 
       - name: Check if it's a release build
         run: |
-          if [[ '${PUSH}' == 'true' ]]; then
+          if [[ '${{ env.PUSH }}' == 'true' ]]; then
             summary="This is a release build for version ${TAG}"
           else
             summary="This is not a release build. Images will be built but not pushed."
