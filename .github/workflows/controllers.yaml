@@ -139,6 +139,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, prepare]
     if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.controller == 'true')
+    outputs:
+      controller_digest: ${{ steps.set-digests.outputs.controller_digest }}
+      controller_chroot_digest: ${{ steps.set-digests.outputs.controller_chroot_digest }}
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      PUSH: ${{ needs.prepare.outputs.push }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -187,7 +193,12 @@ jobs:
         with:
           name: build-metadata
           path: '*-metadata.json'
-
+      - name: Set output digests
+        if: ${{ needs.prepare.outputs.push == 'true' }}
+        id: set-digests
+        run: |
+          echo "controller_digest=$(jq -r '."containerimage.digest"' ingress-nginx-metadata.json)" >> $GITHUB_OUTPUT
+          echo "controller_chroot_digest=$(jq -r '."containerimage.digest"' ingress-nginx-chroot-metadata.json)" >> $GITHUB_OUTPUT
       - name: Create release-${{ needs.prepare.outputs.tag }} branch
         if: ${{ needs.prepare.outputs.push == 'true' }}
         run: |
@@ -207,6 +218,18 @@ jobs:
           git tag "controller-${TAG}"
           git push origin "controller-${TAG}"
 
+  release-helm-chart:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [prepare, build-controllers-images]
+    if: ${{ needs.prepare.outputs.push == 'true' }}
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      PUSH: ${{ needs.prepare.outputs.push }}
+      CONTROLLER_DIGEST: ${{ needs.build-controllers-images.outputs.controller_digest }}
+      CONTROLLER_CHROOT_DIGEST: ${{ needs.build-controllers-images.outputs.controller_chroot_digest }}
+    steps:
       - name: Set up Helm Docs
         uses: gabe565/setup-helm-docs-action@d5c35bdc9133cfbea3b671acadf50a29029e87c2 # v1.0.4
       - name: Set up Helm
@@ -217,6 +240,11 @@ jobs:
         uses: imranismail/setup-kustomize@53f941b41dca13ed61874bbc6b4b6e1562877530 # v3.0.0
         with:
             kustomize-version: 4.5.4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: true
+          ref: release-${{ env.TAG }}
       - name: Prepare helm chart for release
         if: ${{ needs.prepare.outputs.push == 'true' }}
         run: |
@@ -225,13 +253,8 @@ jobs:
             yq eval -i '.version = "${{ github.event.inputs.chart-version }}"' charts/ingress-nginx/Chart.yaml
           fi
           yq eval -i '.appVersion = "${{ env.TAG }}"' charts/ingress-nginx/Chart.yaml
-          # Get the digest of the built image
-          digest=$(jq -r '."containerimage.digest"' ingress-nginx-metadata.json)
-          echo "Image digest: $digest"
-          digestChroot=$(jq -r '."containerimage.digest"' ingress-nginx-chroot-metadata.json)
-          echo "Chroot image digest: $digestChroot"
           # Update the helm chart values.yaml to use the image with the digest
-          yq eval -i '.controller.image.digest = "${digest}" | .controller.image.digestChroot = "${digestChroot}" | .controller.image.tag = "${{ env.TAG }}"' charts/ingress-nginx/values.yaml
+          yq eval -i '.controller.image.digest = "${{ env.CONTROLLER_DIGEST }}" | .controller.image.digestChroot = "${{ env.CONTROLLER_CHROOT_DIGEST }}" | .controller.image.tag = "${{ env.TAG }}"' charts/ingress-nginx/values.yaml
           # Generate the README.md for chart
           helm-docs --chart-search-root charts
           # Edit the static manifests
