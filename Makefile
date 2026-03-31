@@ -73,11 +73,13 @@ image: clean-image ## Build image for a particular arch.
 	docker build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
+		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--metadata-file /tmp/build-metadata/ingress-nginx.json \
 		-t $(REGISTRY)/controller:$(TAG) rootfs
 
 .PHONY: gosec
@@ -267,6 +269,7 @@ release: builder clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--metadata-file /tmp/build-metadata/ingress-nginx.json \
 		-t $(REGISTRY)/controller:$(TAG) rootfs
 
 	docker buildx build \
@@ -280,6 +283,7 @@ release: builder clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--metadata-file /tmp/build-metadata/ingress-nginx-chroot.json \
 		-t $(REGISTRY)/controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
 
 .PHONY: ci # Build a multi-arch docker image

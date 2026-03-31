@@ -1,4 +1,4 @@
-name: Controllers
+name: Controller Build
 
 on:
   pull_request:
@@ -12,7 +12,18 @@ on:
       - main
     paths:
       - 'rootfs/**'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Whether to build and push release images (controller and controller-chroot) or just build images without pushing. This input is ignored when the workflow is triggered by a push or schedule event. Default: false'
+        required: false
+        default: false
+        type: boolean
+      version:
+        description: 'The version to be used for the images. This input is ignored when the workflow is triggered by a push or schedule event. Default: the value of the TAG file'
+        required: false
+        default: ''
+        type: string
   schedule:
     - cron: "0 3 * * 0"
 
@@ -28,6 +39,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
@@ -35,17 +48,89 @@ jobs:
           filters: |
             rootfs:
               - 'rootfs/**'
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.TAG }}
+      push: ${{ steps.push-flag.outputs.PUSH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: true
+          fetch-tags: true
+      - name: Setup tag
+        id: tag
+        run: |
+          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
+            if [[ -n '${{ github.event.inputs.version }}' ]]; then
+              TAG="${{ github.event.inputs.version }}"
+            else
+              TAG="$(cat TAG)"
+            fi
+          else
+            TAG="$(cat TAG)"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "TAG=$TAG"
+      - name: Set push flag
+        id: push-flag
+        run: |
+          PUSH=false
+          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
+            if [[ '${{ github.event.inputs.release }}' == 'true' ]]; then
+              if [[ -z '${{ github.event.inputs.version }}' ]]; then
+                echo "Error: version input is required when release input is true for workflow_dispatch event" >&2
+                exit 1
+              fi
+              echo "PUSH=true" >> $GITHUB_ENV
+              echo "PUSH=true"
+            fi
+          fi
+          echo "PUSH=${PUSH}"
+          echo "PUSH=${PUSH}" >> $GITHUB_OUTPUT
+
+      - name: Check if it's a release build
+        run: |
+          if [[ '${PUSH}' == 'true' ]]; then
+            summary="This is a release build for version ${TAG}"
+          else
+            summary="This is not a release build. Images will be built but not pushed."
+          fi
+          echo "$summary"
+          echo "$summary" >> $GITHUB_STEP_SUMMARY
+      - name: Check if tag exists
+        if: ${{ env.PUSH == 'true' }}
+        run: |
+          if git rev-parse "refs/tags/controller-${TAG}" >/dev/null 2>&1; then
+            summary="Error: Github release tag controller-${TAG} already exists. This release build will fail to push images. Please delete the tag or choose a different version."
+            echo "$summary"
+            echo "$summary" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "Tag controller-${TAG} does not exist. Proceeding with the release build."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "controller-${TAG}"
+            git push origin "controller-${TAG}"
+          fi
 
   build-controllers-images:
     permissions:
       contents: write
       packages: write
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, prepare]
     if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.controller == 'true')
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          ref: ${{ case(needs.prepare.outputs.push == 'true', format('refs/tags/controller-{0}', needs.prepare.outputs.tag), github.ref) }}
       - name: Get go version
         run: echo "GOLANG_VERSION=$(cat GOLANG_VERSION)" >> $GITHUB_ENV
 
@@ -74,11 +159,17 @@ jobs:
       - name: Set make command
         run: |
           make_cmd=ci
-          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{needs.changes.outputs.controller}}' == 'true' ]]; then
+          if [[ '${{ needs.prepare.outputs.push }}' == 'true' ]]; then
             make_cmd=release
           fi
           echo "MAKE_COMMAND=$make_cmd" >> $GITHUB_ENV
           echo "MAKE_COMMAND=$make_cmd"
       - name: build-images
         run: |
-          make REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx ${MAKE_COMMAND}
+          make TAG=${{ needs.prepare.outputs.tag }} REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx ${MAKE_COMMAND}
+      - name: Upload metadata
+        if: ${{ needs.prepare.outputs.push == 'true' }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: build-metadata
+          path: /tmp/build-metadata/*
