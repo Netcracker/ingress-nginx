@@ -81,4 +81,4 @@ jobs:
           echo "MAKE_COMMAND=$make_cmd"
       - name: build-images
         run: |
-          make ${MAKE_COMMAND}
+          make REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx ${MAKE_COMMAND}
