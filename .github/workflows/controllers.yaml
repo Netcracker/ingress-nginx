@@ -109,8 +109,19 @@ jobs:
             exit 1
           else
             echo "Tag controller-${TAG} does not exist. Proceeding with the release build."
+            ### 🎋 Creating release branch release-${TAG}
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b release-${TAG}
+            git config pull.rebase false
+            git pull origin ${ref_name}
+            git push --set-upstream origin release-${TAG}
+            ### Edit the semver tag
+            echo "${TAG}" > TAG
+            git add .
+            git commit -m "release: Set controller image tag to ${TAG}" || true
+            git push
+            ### 🎋 Creating release tag
             git tag "controller-${TAG}"
             git push origin "controller-${TAG}"
           fi
