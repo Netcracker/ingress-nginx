@@ -19,8 +19,13 @@ on:
         required: false
         default: false
         type: boolean
-      version:
-        description: 'The version to be used for the images. This input is ignored when the workflow is triggered by a push or schedule event. Default: the value of the TAG file'
+      controller-version:
+        description: 'The version to be used for the controller image (SemVer: vX.Y.Z). This input is ignored when the workflow is triggered by a push or schedule event. Default: the value of the TAG file'
+        required: false
+        default: ''
+        type: string
+      chart-version:
+        description: 'The version to be used for the helm chart (SemVer: X.Y.Z). This input is ignored when the workflow is triggered by a push or schedule event. Default: the value in charts/ingress-nginx/Chart.yaml'
         required: false
         default: ''
         type: string
@@ -66,8 +71,8 @@ jobs:
         run: |
           TAG="$(cat TAG)"
           if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
-            if [[ -n '${{ github.event.inputs.version }}' ]]; then
-              TAG="${{ github.event.inputs.version }}"
+            if [[ -n '${{ github.event.inputs.controller-version }}' ]]; then
+              TAG="${{ github.event.inputs.controller-version }}"
             fi
           fi
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
@@ -79,7 +84,7 @@ jobs:
           PUSH=false
           if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]]; then
             if [[ '${{ github.event.inputs.release }}' == 'true' ]]; then
-              if [[ -z '${{ github.event.inputs.version }}' ]]; then
+              if [[ -z '${{ github.event.inputs.controller-version }}' ]]; then
                 echo "Error: version input is required when release input is true for workflow_dispatch event" >&2
                 exit 1
               fi
@@ -107,24 +112,25 @@ jobs:
             echo "$summary"
             echo "$summary" >> $GITHUB_STEP_SUMMARY
             exit 1
-          else
-            echo "Tag controller-${TAG} does not exist. Proceeding with the release build."
-            ### 🎋 Creating release branch release-${TAG}
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git checkout -b release-${TAG}
-            git config pull.rebase false
-            git pull origin ${ref_name}
-            git push --set-upstream origin release-${TAG}
-            ### Edit the semver tag
-            echo "${TAG}" > TAG
-            git add .
-            git commit -m "release: Set controller image tag to ${TAG}" || true
-            git push
-            ### 🎋 Creating release tag
-            git tag "controller-${TAG}"
-            git push origin "controller-${TAG}"
           fi
+          # else
+          #   echo "Tag controller-${TAG} does not exist. Proceeding with the release build."
+          #   ### 🎋 Creating release branch release-${TAG}
+          #   git config user.name "github-actions[bot]"
+          #   git config user.email "github-actions[bot]@users.noreply.github.com"
+          #   git checkout -b release-${TAG}
+          #   git config pull.rebase false
+          #   git pull origin ${ref_name}
+          #   git push --set-upstream origin release-${TAG}
+          #   ### Edit the semver tag
+          #   echo "${TAG}" > TAG
+          #   git add .
+          #   git commit -m "release: Set controller image tag to ${TAG}" || true
+          #   git push
+          #   ### 🎋 Creating release tag
+          #   git tag "controller-${TAG}"
+          #   git push origin "controller-${TAG}"
+          # fi
 
   build-controllers-images:
     permissions:
@@ -137,8 +143,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          persist-credentials: false
-          ref: ${{ case(needs.prepare.outputs.push == 'true', format('refs/tags/controller-{0}', needs.prepare.outputs.tag), github.ref) }}
+          persist-credentials: true
+          # ref: ${{ case(needs.prepare.outputs.push == 'true', format('refs/tags/controller-{0}', needs.prepare.outputs.tag), github.ref) }}
       - name: Get go version
         run: echo "GOLANG_VERSION=$(cat GOLANG_VERSION)" >> $GITHUB_ENV
 
@@ -181,3 +187,57 @@ jobs:
         with:
           name: build-metadata
           path: '*-metadata.json'
+
+      - name: Create release-${{ needs.prepare.outputs.tag }} branch
+        if: ${{ needs.prepare.outputs.push == 'true' }}
+        run: |
+          ### 🎋 Creating release branch release-${TAG}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b release-${TAG}
+          git config pull.rebase false
+          git pull origin ${ref_name}
+          git push --set-upstream origin release-${TAG}
+          ### Edit the semver tag
+          echo "${TAG}" > TAG
+          git add .
+          git commit -m "release: Set controller image tag to ${TAG}" || true
+          git push
+          ### 🎋 Creating controller-${TAG} release tag
+          git tag "controller-${TAG}"
+          git push origin "controller-${TAG}"
+
+      - name: Set up Helm Docs
+        uses: gabe565/setup-helm-docs-action@d5c35bdc9133cfbea3b671acadf50a29029e87c2 # v1.0.4
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v4.1.1
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@53f941b41dca13ed61874bbc6b4b6e1562877530 # v3.0.0
+        with:
+            kustomize-version: 4.5.4
+      - name: Prepare helm chart for release
+        if: ${{ needs.prepare.outputs.push == 'true' }}
+        run: |
+          # Update the helm chart version and appVersion to match the image tag
+          if [[ -n '${{ github.event.inputs.chart-version }}' ]]; then
+            yq eval -i '.version = "${{ github.event.inputs.chart-version }}"' charts/ingress-nginx/Chart.yaml
+          fi
+          yq eval -i '.appVersion = "${{ env.TAG }}"' charts/ingress-nginx/Chart.yaml
+          # Get the digest of the built image
+          digest=$(jq -r '."containerimage.digest"' ingress-nginx-metadata.json)
+          echo "Image digest: $digest"
+          digestChroot=$(jq -r '."containerimage.digest"' ingress-nginx-chroot-metadata.json)
+          echo "Chroot image digest: $digestChroot"
+          # Update the helm chart values.yaml to use the image with the digest
+          yq eval -i '.controller.image.digest = "${digest}" | .controller.image.digestChroot = "${digestChroot}" | .controller.image.tag = "${{ env.TAG }}"' charts/ingress-nginx/values.yaml
+          # Generate the README.md for chart
+          helm-docs --chart-search-root charts
+          # Edit the static manifests
+          chmod +x hack/generate-deploy-scripts.sh
+          hack/generate-deploy-scripts.sh
+          # Add changes to git and push
+          git add .
+          git commit -m "release: Update helm chart version to ${TAG}" || true
+          git push
