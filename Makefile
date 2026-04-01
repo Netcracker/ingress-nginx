@@ -79,7 +79,6 @@ image: clean-image ## Build image for a particular arch.
 		--build-arg TARGETARCH="$(ARCH)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
-		--metadata-file /tmp/build-metadata/ingress-nginx.json \
 		-t $(REGISTRY)/controller:$(TAG) rootfs
 
 .PHONY: gosec
