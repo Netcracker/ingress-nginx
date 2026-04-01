@@ -245,4 +245,4 @@ jobs:
         run: |
           export TAG=$(cat images/nginx/TAG)
           export IMG_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx
-          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} -t ${IMG_NAME}:${TAG} .
+          cd images/nginx/rootfs && docker buildx build --push --platform=${{ env.PLATFORMS }} -t ${IMG_NAME}:${TAG} .
