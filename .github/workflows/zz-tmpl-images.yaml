@@ -52,7 +52,7 @@ jobs:
 
       - name: Build
         run: |
-          cd images/ && make NAME=${{ inputs.name }} build
+          cd images/ && make NAME=${{ inputs.name }} REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx build
 
   image-push:
     name: Push

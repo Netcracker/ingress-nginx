@@ -179,7 +179,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: image build
       run: |
-        cd images/ && make NAME=kube-webhook-certgen push
+        cd images/ && make REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx NAME=kube-webhook-certgen push
 
 
   kube-webhook-certgen:
