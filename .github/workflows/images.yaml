@@ -13,8 +13,6 @@ on:
     paths:
       - 'images/**'
   workflow_dispatch: {}
-  schedule:
-    - cron: "0 3 * * 0"
 permissions:
   contents: write
   packages: write
@@ -72,7 +70,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.cfssl == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.cfssl == 'true')  || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: cfssl
@@ -84,7 +82,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.custom-error-pages == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.custom-error-pages == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: custom-error-pages
@@ -96,7 +94,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.e2e-test-echo == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.e2e-test-echo == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: e2e-test-echo
@@ -108,7 +106,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.ext-auth-example-authsvc == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.ext-auth-example-authsvc == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: ext-auth-example-authsvc
@@ -120,7 +118,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.fastcgi-helloserver == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.fastcgi-helloserver == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: fastcgi-helloserver
@@ -132,7 +130,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.go-grpc-greeter-server == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.go-grpc-greeter-server == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: go-grpc-greeter-server
@@ -144,7 +142,7 @@ jobs:
       packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.httpbun == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.httpbun == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: httpbun
@@ -186,7 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: |
-      (needs.changes.outputs.kube-webhook-certgen == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (needs.changes.outputs.kube-webhook-certgen == 'true') || (github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -222,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true') || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true') || (github.event_name == 'workflow_dispatch')
     env:
       PLATFORMS: linux/amd64,linux/arm,linux/arm64
     steps:
