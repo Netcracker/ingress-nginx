@@ -240,16 +240,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set push flag
-        run: |
-          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]]; then
-            echo "PUSH_FLAG='--push'"
-            echo "PUSH_FLAG='--push'" >> $GITHUB_ENV
-          else
-            echo "PUSH_FLAG="
-          fi
+
       - name: build-rootfs-image
         run: |
           export TAG=$(cat images/nginx/TAG)
           export IMG_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx
-          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} $PUSH_FLAG -t ${IMG_NAME}:${TAG} .
+          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} -t ${IMG_NAME}:${TAG} .
