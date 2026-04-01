@@ -5,12 +5,12 @@ on:
   workflow_dispatch:
     inputs:
       controller-version:
-        description: 'The version to be used for the controller image (SemVer: vX.Y.Z). This input is ignored when the workflow is triggered by a push or schedule event. Default: the value of the TAG file'
+        description: 'The version to be used for the controller image (SemVer: vX.Y.Z).'
         required: true
         default: ''
         type: string
       chart-version:
-        description: 'The version to be used for the helm chart (SemVer: X.Y.Z). This input is ignored when the workflow is triggered by a push or schedule event. Default: the value in charts/ingress-nginx/Chart.yaml'
+        description: 'The version to be used for the helm chart (SemVer: X.Y.Z).'
         required: true
         default: ''
         type: string
@@ -81,7 +81,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: build-images
         run: |
-          make TAG=${{ needs.prepare.outputs.tag }} REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx release
+          make TAG=${{ env.TAG }} REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx release
       - name: Upload metadata
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
