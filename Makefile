@@ -58,7 +58,7 @@ ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
 
-REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+REGISTRY ?= ghcr.io/netcracker/ingress-nginx
 
 BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
@@ -73,6 +73,7 @@ image: clean-image ## Build image for a particular arch.
 	docker build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
+		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
@@ -267,12 +268,45 @@ release: builder clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--metadata-file ingress-nginx-metadata.json \
 		-t $(REGISTRY)/controller:$(TAG) rootfs
 
 	docker buildx build \
 		--no-cache \
 		$(MAC_DOCKER_FLAGS) \
 		--push \
+		--pull \
+		--progress plain \
+		--platform $(BUILDX_PLATFORMS)  \
+		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
+		--build-arg VERSION="$(TAG)" \
+		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
+		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--metadata-file ingress-nginx-chroot-metadata.json \
+		-t $(REGISTRY)/controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
+
+.PHONY: ci # Build a multi-arch docker image
+ci: builder clean
+	echo "Building binaries..."
+	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
+
+	echo "Building and pushing ingress-nginx image...$(BUILDX_PLATFORMS)"
+
+	docker buildx build \
+		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
+		--pull \
+		--progress plain \
+		--platform $(BUILDX_PLATFORMS) \
+		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
+		--build-arg VERSION="$(TAG)" \
+		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
+		--build-arg BUILD_ID="$(BUILD_ID)" \
+		-t $(REGISTRY)/controller:$(TAG) rootfs
+
+	docker buildx build \
+		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
 		--pull \
 		--progress plain \
 		--platform $(BUILDX_PLATFORMS)  \

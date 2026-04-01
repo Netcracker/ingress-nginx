@@ -12,7 +12,7 @@ on:
       - main
     paths:
       - 'images/**'
-
+  workflow_dispatch: {}
 permissions:
   contents: write
   packages: write
@@ -64,75 +64,127 @@ jobs:
             nginx:
               - 'images/nginx/**'
 
-  #### TODO: Make the below jobs 'less dumb' and use the job name as parameter (the github.job context does not work here)
   cfssl:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.cfssl == 'true')
+      (needs.changes.outputs.cfssl == 'true')  || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: cfssl
     secrets: inherit
 
   custom-error-pages:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.custom-error-pages == 'true')
+      (needs.changes.outputs.custom-error-pages == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: custom-error-pages
     secrets: inherit
 
   e2e-test-echo:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.e2e-test-echo == 'true')
+      (needs.changes.outputs.e2e-test-echo == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: e2e-test-echo
     secrets: inherit
 
   ext-auth-example-authsvc:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.ext-auth-example-authsvc == 'true')
+      (needs.changes.outputs.ext-auth-example-authsvc == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: ext-auth-example-authsvc
     secrets: inherit
 
   fastcgi-helloserver:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.fastcgi-helloserver == 'true')
+      (needs.changes.outputs.fastcgi-helloserver == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: fastcgi-helloserver
     secrets: inherit
 
   go-grpc-greeter-server:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.go-grpc-greeter-server == 'true')
+      (needs.changes.outputs.go-grpc-greeter-server == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: go-grpc-greeter-server
     secrets: inherit
 
   httpbun:
+    permissions:
+      contents: write
+      packages: write
     needs: changes
     if: |
-      (needs.changes.outputs.httpbun == 'true')
+      (needs.changes.outputs.httpbun == 'true') || (github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: httpbun
     secrets: inherit
 
-  kube-webhook-certgen:
+  kube-webhook-certgen-push:
+    permissions:
+      contents: write
+      packages: write
     runs-on: ubuntu-latest
     needs: changes
     if: |
       (needs.changes.outputs.kube-webhook-certgen == 'true')
+    steps:
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Get go version
+      run: echo "GOLANG_VERSION=$(cat GOLANG_VERSION)" >> $GITHUB_ENV
+
+    - name: Set up Go
+      id: go
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      with:
+        go-version: ${{ env.GOLANG_VERSION }}
+        check-latest: true
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: image build
+      run: |
+        cd images/ && make REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx NAME=kube-webhook-certgen push
+
+
+  kube-webhook-certgen:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      (needs.changes.outputs.kube-webhook-certgen == 'true') || (github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -168,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.nginx == 'true') || (github.event_name == 'workflow_dispatch')
     env:
       PLATFORMS: linux/amd64,linux/arm,linux/arm64
     steps:
@@ -185,9 +237,19 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: build-image
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set push flag
+        run: |
+          if [[ '${{ github.event_name }}' == 'push' && '${{ github.ref }}' == 'refs/heads/main' && '${{ needs.changes.outputs.nginx }}' == 'true' ]]; then
+            echo "PUSH_FLAG='--push'"
+            echo "PUSH_FLAG='--push'" >> $GITHUB_ENV
+          else
+            echo "PUSH_FLAG="
+          fi
+      - name: build-rootfs-image
         run: |
           export TAG=$(cat images/nginx/TAG)
-          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} --push -t ingressnginx/nginx:${TAG} .
+          export IMG_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx
+          cd images/nginx/rootfs && docker buildx build --platform=${{ env.PLATFORMS }} $PUSH_FLAG -t ${IMG_NAME}:${TAG} .
