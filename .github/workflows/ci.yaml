@@ -191,7 +191,7 @@ jobs:
         run: |
           echo "building images..."
           export TAGNGINX=$(cat images/nginx/TAG)
-          make BASE_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx:${TAGNGINX} REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx clean-image build image image-chroot
+          make BASE_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/nginx:${TAGNGINX} clean-image build image image-chroot
           make -C test/e2e-image image
 
           echo "creating images cache..."
