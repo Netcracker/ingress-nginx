@@ -94,32 +94,33 @@ jobs:
           echo "controller_chroot_digest=$(jq -r '."containerimage.digest"' ingress-nginx-chroot-metadata.json)" >> $GITHUB_OUTPUT
       - name: Create release-${{ inputs.controller-version }} branch
         run: |
-          ### 🎋 Creating release branch release-${{ env.TAG }}
+          ### Edit the semver tag
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b release-${TAG}
-          git config pull.rebase false
-          git pull origin ${{ github.ref_name }}
-          git push --set-upstream origin release-${TAG}
-          ### Edit the semver tag
           echo "${TAG}" > TAG
-          git add .
+          git add TAG
           git commit -m "release: Set controller image tag to ${TAG}" || true
           git push
-          ### 🎋 Creating controller-${{ env.TAG }} release tag
-          git tag "controller-${TAG}"
-          git push origin "controller-${TAG}"
-      - name: Run Release Drafter
-        uses: netcracker/release-drafter@86f4276a3894b5af70480e826c32fe3648ac6a70 # v1.0.0
-        with:
-          config-name: release-drafter-config.yml
-          publish: true
-          name: controller-${{ env.TAG }}
-          tag: ${{ env.TAG }}
-          version: ${{ env.TAG }}
-          latest: true
+      - name: Create release controller-${{ env.TAG }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create controller-${{ env.TAG }} \
+            --target ${{ github.ref }} \
+            --title "controller-${{ env.TAG }}" \
+            --draft=false \
+            --latest=true \
+            --notes "controller-${{ env.TAG }}.
+
+          ## Docker images
+
+          \`\`\`
+          ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/controller:${{ env.TAG }}@${{ steps.set-digests.outputs.controller_digest }}
+          \`\`\`
+          \`\`\`
+          ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ingress-nginx/controller-chroot:${{ env.TAG }}@${{ steps.set-digests.outputs.controller_chroot_digest }}
+          \`\`\`
+          "
 
   release-helm-chart:
     permissions:
@@ -157,13 +158,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: true
-          ref: release-${{ env.TAG }}
           fetch-depth: 0
       - name: Prepare helm chart for release
         run: |
           # Update the helm chart version and appVersion to match the image tag
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull
 
           if [[ -n '${CHART_VERSION}' ]]; then
             yq eval -i '.version = "${{ env.CHART_VERSION }}"' charts/ingress-nginx/Chart.yaml
