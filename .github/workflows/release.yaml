@@ -193,15 +193,3 @@ jobs:
           CR_SKIP_EXISTING: true
         with:
           charts_dir: charts
-
-      - name: Run Release Drafter
-        uses: netcracker/release-drafter@86f4276a3894b5af70480e826c32fe3648ac6a70 # v1.0.0
-        with:
-          config-name: release-drafter-config.yml
-          publish: true
-          name: helm-chart-${{ env.CHART_VERSION }}
-          tag: ${{ env.CHART_VERSION }}
-          version: ${{ env.CHART_VERSION }}
-          latest: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
