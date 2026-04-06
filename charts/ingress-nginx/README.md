@@ -275,7 +275,7 @@ metadata:
 | controller.admissionWebhooks.namespaceSelector | object | `{}` |  |
 | controller.admissionWebhooks.objectSelector | object | `{}` |  |
 | controller.admissionWebhooks.patch.enabled | bool | `true` |  |
-| controller.admissionWebhooks.patch.image.digest | string | `"sha256:01038e7de14b78d702d2849c3aad72fd25903c4765af63cf16aa3398f5d5f2dd"` |  |
+| controller.admissionWebhooks.patch.image.digest | string | `"sha256:658733ca50849d230e6513f375f8bf0e097b775b693c42f1e3c1e92df6985134"` |  |
 | controller.admissionWebhooks.patch.image.image | string | `"netcracker/ingress-nginx/kube-webhook-certgen"` |  |
 | controller.admissionWebhooks.patch.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.admissionWebhooks.patch.image.tag | string | `"v1.6.9"` |  |
