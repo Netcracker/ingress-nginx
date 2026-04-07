@@ -2,7 +2,7 @@
 
 [ingress-nginx](https://github.com/kubernetes/ingress-nginx) Ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer
 
-![Version: 4.16.0](https://img.shields.io/badge/Version-4.16.0-informational?style=flat-square) ![AppVersion: v1.16.0](https://img.shields.io/badge/AppVersion-v1.16.0-informational?style=flat-square)
+![Version: v1.16.0](https://img.shields.io/badge/Version-v1.16.0-informational?style=flat-square) ![AppVersion: v1.16.0](https://img.shields.io/badge/AppVersion-v1.16.0-informational?style=flat-square)
 
 To use, add `ingressClassName: nginx` spec field or the `kubernetes.io/ingress.class: nginx` annotation to your Ingress resources.
 
@@ -349,8 +349,8 @@ metadata:
 | controller.hostname | object | `{}` | Optionally customize the pod hostname. |
 | controller.image.allowPrivilegeEscalation | bool | `false` |  |
 | controller.image.chroot | bool | `false` |  |
-| controller.image.digest | string | `"sha256:5e350f2af4ff810228e09ac3a6392d120ff6c3b6fff83ffd990ca15ffff0d2ec"` |  |
-| controller.image.digestChroot | string | `"sha256:f38df1ca13acf2fbb08af213f51fdc69fc9072e83223d0dfe3ed6780a50134f4"` |  |
+| controller.image.digest | string | `"sha256:17f31a6e5995494185d24c667b04f56c6dfdc9ebaf8a144f37d70331a7bd70c2"` |  |
+| controller.image.digestChroot | string | `"sha256:6a5d96d215eb5f77f03c74ac0a558e1ad1ac688ea65e954cbee2a8318bf25fbd"` |  |
 | controller.image.image | string | `"netcracker/ingress-nginx/controller"` |  |
 | controller.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.image.readOnlyRootFilesystem | bool | `false` |  |

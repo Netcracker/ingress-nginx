@@ -31,8 +31,8 @@ controller:
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
     tag: "v1.16.0"
-    digest: sha256:5e350f2af4ff810228e09ac3a6392d120ff6c3b6fff83ffd990ca15ffff0d2ec
-    digestChroot: sha256:f38df1ca13acf2fbb08af213f51fdc69fc9072e83223d0dfe3ed6780a50134f4
+    digest: sha256:17f31a6e5995494185d24c667b04f56c6dfdc9ebaf8a144f37d70331a7bd70c2
+    digestChroot: sha256:6a5d96d215eb5f77f03c74ac0a558e1ad1ac688ea65e954cbee2a8318bf25fbd
     pullPolicy: IfNotPresent
     runAsNonRoot: true
     # -- This value must not be changed using the official image.

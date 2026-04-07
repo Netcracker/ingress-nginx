@@ -448,7 +448,7 @@ spec:
               fieldPath: metadata.namespace
         - name: LD_PRELOAD
           value: /usr/local/lib/libmimalloc.so
-        image: ghcr.io/netcracker/ingress-nginx/controller:v1.16.0@sha256:5e350f2af4ff810228e09ac3a6392d120ff6c3b6fff83ffd990ca15ffff0d2ec
+        image: ghcr.io/netcracker/ingress-nginx/controller:v1.16.0@sha256:17f31a6e5995494185d24c667b04f56c6dfdc9ebaf8a144f37d70331a7bd70c2
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
