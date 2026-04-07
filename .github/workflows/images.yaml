@@ -61,6 +61,8 @@ jobs:
               - 'images/kube-webhook-certgen/**'
             ext-auth-example-authsvc:
               - 'images/ext-auth-example-authsvc/**'
+            test-runner:
+              - 'images/test-runner/**'
             nginx:
               - 'images/nginx/**'
 
@@ -146,6 +148,18 @@ jobs:
     uses: ./.github/workflows/zz-tmpl-images.yaml
     with:
       name: httpbun
+    secrets: inherit
+
+  test-runner:
+    permissions:
+      contents: write
+      packages: write
+    needs: changes
+    if: |
+      (needs.changes.outputs.test-runner == 'true') || (github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/zz-tmpl-images.yaml
+    with:
+      name: test-runner
     secrets: inherit
 
   kube-webhook-certgen-push:
